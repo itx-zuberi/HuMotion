@@ -1,0 +1,12 @@
+*.psd
+*.sketch
+.DS_Store
+Thumbs.db
+.git
+.gitignore
+.vscode
+.idea
+*.log
+node_modules
+.env
+.env.local

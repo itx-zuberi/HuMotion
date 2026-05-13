@@ -1,0 +1,21 @@
+{
+  "name": "humotion-landing",
+  "version": "1.0.0",
+  "description": "AI-Powered Prosthetic Arm - Landing Page. Surgery-free solution for amputees.",
+  "private": true,
+  "keywords": [
+    "prosthetic",
+    "AI",
+    "healthcare",
+    "assistive-technology",
+    "humotion",
+    "pakistan"
+  ],
+  "author": "HuMotion Team",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npx http-server . -p 3000 -c-1",
+    "build": "echo 'No build required - static site'",
+    "preview": "npx http-server . -p 3000"
+  }
+}

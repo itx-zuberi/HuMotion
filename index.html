@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuMotion — AI-Powered Prosthetic Arm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:'Inter',sans-serif;background:#09090b;color:#fafafa;overflow-x:hidden}
+        ::selection{background:rgba(6,182,212,0.25);color:#cffafe}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-track{background:#09090b}
+        ::-webkit-scrollbar-thumb{background:#27272a;border-radius:99px}
+        .font-display{font-family:'Space Grotesk',sans-serif}
+        .font-mono{font-family:'JetBrains Mono',monospace}
+
+        /* ===== CINEMATIC INTRO ===== */
+        #intro-overlay{position:fixed;inset:0;z-index:99999;background:#09090b;display:flex;align-items:center;justify-content:center;transition:opacity .8s ease, visibility .8s ease}
+        #intro-overlay.hide{opacity:0;visibility:hidden}
+        .intro-orb{width:20px;height:20px;border-radius:50%;background:#06b6d4;box-shadow:0 0 60px 10px rgba(6,182,212,0.6),0 0 120px 30px rgba(6,182,212,0.3);animation:orbDrop 1s cubic-bezier(.22,1,.36,1) forwards,orbLand .3s cubic-bezier(.34,1.56,.64,1) 1s forwards,orbShatter .6s ease-in 1.6s forwards}
+        @keyframes orbDrop{0%{transform:translateY(-120vh) scale(.3)}70%{transform:translateY(0) scale(1)}100%{transform:translateY(0) scale(1)}}
+        @keyframes orbLand{0%{transform:scale(1)}40%{transform:scaleX(1.6) scaleY(.6)}70%{transform:scaleX(.9) scaleY(1.15)}100%{transform:scale(1)}}
+        @keyframes orbShatter{0%{transform:scale(1);opacity:1;filter:blur(0)}50%{opacity:1}100%{transform:scale(80);opacity:0;filter:blur(20px)}}
+        
+        .intro-ring{position:absolute;width:20px;height:20px;border-radius:50%;border:2px solid rgba(6,182,212,0.4);opacity:0;animation:ringExpand 1s ease-out 1.3s forwards}
+        .intro-ring:nth-child(2){animation-delay:1.4s}
+        .intro-ring:nth-child(3){animation-delay:1.5s}
+        @keyframes ringExpand{0%{transform:scale(1);opacity:.8}100%{transform:scale(30);opacity:0}}
+
+        #site-content{opacity:0;transition:opacity 1s ease .2s}
+        #site-content.visible{opacity:1}
+
+        /* ===== GLOBAL ANIMATIONS ===== */
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+        @keyframes float2{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+        @keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(6,182,212,0.15)}50%{box-shadow:0 0 40px rgba(6,182,212,0.3)}}
+        @keyframes gradient-x{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes spin-slow{to{transform:rotate(360deg)}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+        @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.8)}}
+        @keyframes ripple{0%{transform:scale(1);opacity:.3;border-width:2px}100%{transform:scale(4);opacity:0;border-width:0.5px}}
+        @keyframes corePulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.1);opacity:1}}
+        @keyframes dataStream{0%{height:0;opacity:0}30%{opacity:1}100%{height:100%;opacity:0}}
+        @keyframes textReveal{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+
+        .animate-float{animation:float 6s ease-in-out infinite}
+        .animate-float2{animation:float2 8s ease-in-out infinite}
+        .animate-gradient{background-size:200% 200%;animation:gradient-x 4s ease infinite}
+
+        .gradient-text{background:linear-gradient(135deg,#22d3ee,#06b6d4,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .gradient-text-hero{background:linear-gradient(135deg,#ffffff 0%,#22d3ee 40%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradient-x 6s ease infinite;background-size:200% 200%}
+
+        .glass{background:rgba(24,24,27,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+        .card{background:rgba(24,24,27,0.4);border:1px solid rgba(255,255,255,0.05);border-radius:20px;transition:all .4s cubic-bezier(.4,0,.2,1)}
+        .card:hover{border-color:rgba(6,182,212,0.2);transform:translateY(-4px);box-shadow:0 20px 60px -12px rgba(6,182,212,0.08)}
+        .btn{position:relative;overflow:hidden;transition:all .3s ease}
+        .btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);opacity:0;transition:opacity .3s}
+        .btn:hover::after{opacity:1}
+        .btn:hover{transform:translateY(-1px)}
+        .glow{box-shadow:0 0 30px rgba(6,182,212,0.1),0 0 60px rgba(6,182,212,0.03)}
+        .glow-strong{box-shadow:0 0 25px rgba(6,182,212,0.2),0 0 50px rgba(6,182,212,0.06)}
+
+        .sr{opacity:0;transform:translateY(50px);transition:all .9s cubic-bezier(.4,0,.2,1)}
+        .sr.visible{opacity:1;transform:translateY(0)}
+        .sr-left{opacity:0;transform:translateX(-60px);transition:all .9s cubic-bezier(.4,0,.2,1)}
+        .sr-left.visible{opacity:1;transform:translateX(0)}
+        .sr-right{opacity:0;transform:translateX(60px);transition:all .9s cubic-bezier(.4,0,.2,1)}
+        .sr-right.visible{opacity:1;transform:translateX(0)}
+        .sr-scale{opacity:0;transform:scale(.88);transition:all .8s cubic-bezier(.4,0,.2,1)}
+        .sr-scale.visible{opacity:1;transform:scale(1)}
+        .d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}.d4{transition-delay:.24s}.d5{transition-delay:.3s}.d6{transition-delay:.36s}.d7{transition-delay:.42s}.d8{transition-delay:.48s}
+
+        #particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+        .section-line{height:1px;background:linear-gradient(90deg,transparent,rgba(6,182,212,0.08),transparent)}
+        .toast{position:fixed;bottom:2rem;right:2rem;padding:1rem 1.5rem;background:rgba(24,24,27,0.95);border:1px solid rgba(6,182,212,0.2);border-radius:16px;color:#fff;z-index:10000;transform:translateY(140%);transition:transform .5s cubic-bezier(.4,0,.2,1);box-shadow:0 0 30px rgba(6,182,212,0.1)}
+        .toast.show{transform:translateY(0)}
+        .mobile-menu{clip-path:circle(0% at calc(100% - 40px) 40px);transition:clip-path .6s cubic-bezier(.4,0,.2,1)}
+        .mobile-menu.open{clip-path:circle(150% at calc(100% - 40px) 40px)}
+        .tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+        .feature-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+        .feature-icon::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(6,182,212,0.1),rgba(124,58,237,0.05));border-radius:inherit}
+        .step-number{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;position:relative}
+        .step-number::after{content:'';position:absolute;inset:-2px;border-radius:16px;background:conic-gradient(from 0deg,#06b6d4,#7c3aed,#06b6d4);z-index:-1;opacity:.3;animation:spin-slow 8s linear infinite}
+        .pricing-popular{position:relative}
+        .pricing-popular::before{content:'';position:absolute;inset:-1px;border-radius:21px;background:linear-gradient(135deg,#06b6d4,#7c3aed);z-index:-1;opacity:.4}
+
+        /* Hero Visual - AI Core */
+        .core-container{position:relative;width:320px;height:320px}
+        @media(min-width:640px){.core-container{width:420px;height:420px}}
+        @media(min-width:1024px){.core-container{width:500px;height:500px}}
+        .core-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#22d3ee,#06b6d4,transparent);animation:corePulse 3s ease-in-out infinite;box-shadow:0 0 80px 20px rgba(6,182,212,0.2)}
+        .core-ring{position:absolute;top:50%;left:50%;border-radius:50%;border:1px solid rgba(6,182,212,0.1);transform:translate(-50%,-50%)}
+        .core-ring-1{width:160px;height:160px;animation:spin-slow 15s linear infinite}
+        .core-ring-2{width:240px;height:240px;animation:spin-slow 25s linear infinite reverse;border-color:rgba(124,58,237,0.08)}
+        .core-ring-3{width:320px;height:320px;animation:spin-slow 35s linear infinite;border-color:rgba(6,182,212,0.05)}
+        @media(min-width:640px){.core-ring-1{width:200px;height:200px}.core-ring-2{width:300px;height:300px}.core-ring-3{width:400px;height:400px}}
+        @media(min-width:1024px){.core-ring-1{width:240px;height:240px}.core-ring-2{width:360px;height:360px}.core-ring-3{width:480px;height:480px}}
+        
+        .core-node{position:absolute;width:8px;height:8px;border-radius:50%;background:#06b6d4;box-shadow:0 0 10px rgba(6,182,212,0.6)}
+        .core-node-v{background:#7c3aed;box-shadow:0 0 10px rgba(124,58,237,0.6)}
+        
+        .data-line{position:absolute;top:50%;left:50%;width:1px;background:linear-gradient(to bottom,transparent,rgba(6,182,212,0.3),transparent);transform-origin:top center;animation:dataStream 3s ease-in-out infinite}
+    </style>
+</head>
+<body>
+
+<!-- CINEMATIC INTRO -->
+<div id="intro-overlay">
+    <div class="intro-ring"></div>
+    <div class="intro-ring"></div>
+    <div class="intro-ring"></div>
+    <div class="intro-orb"></div>
+</div>
+
+<canvas id="particles"></canvas>
+<div id="toast" class="toast"><div class="flex items-center gap-3"><i data-lucide="check-circle" class="w-5 h-5 text-cyan-400"></i><span id="toastMsg" class="text-sm font-medium"></span></div></div>
+
+<div id="site-content">
+
+<!-- NAV -->
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-500" style="background:transparent">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <a href="#" class="flex items-center gap-2.5 group">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/30 transition-shadow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v20M5 8l7-6 7 6"/></svg>
+                </div>
+                <span class="text-lg font-bold font-display tracking-tight">Hu<span class="gradient-text">Motion</span></span>
+            </a>
+            <div class="hidden md:flex items-center gap-1">
+                <a href="#problem" class="nav-link px-4 py-2 text-[13px] text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">Problem</a>
+                <a href="#tech" class="nav-link px-4 py-2 text-[13px] text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">Technology</a>
+                <a href="#features" class="nav-link px-4 py-2 text-[13px] text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">Features</a>
+                <a href="#compare" class="nav-link px-4 py-2 text-[13px] text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">Compare</a>
+                <a href="#pricing" class="nav-link px-4 py-2 text-[13px] text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">Pricing</a>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="#pricing" class="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-[13px] font-semibold rounded-xl btn shadow-lg shadow-cyan-600/20">
+                    Pre-Order <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+                <button id="menuBtn" class="md:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="menu" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobileMenu" class="mobile-menu fixed inset-0 z-[60] bg-[#09090b]/98 flex flex-col items-center justify-center gap-8">
+    <button id="menuClose" class="absolute top-4 right-5 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <a href="#problem" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Problem</a>
+    <a href="#tech" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Technology</a>
+    <a href="#features" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Features</a>
+    <a href="#compare" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Compare</a>
+    <a href="#pricing" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Pricing</a>
+    <a href="#contact" class="mob-link text-2xl font-display font-bold text-zinc-200 hover:text-cyan-400 transition-colors">Contact</a>
+    <a href="#pricing" class="mt-4 px-8 py-3 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white font-bold rounded-2xl">Pre-Order Now</a>
+</div>
+
+<!-- HERO -->
+<section id="hero" class="relative min-h-screen flex items-center overflow-hidden pt-16">
+    <div class="absolute inset-0">
+        <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/[0.04] rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[100px]"></div>
+    </div>
+    <div class="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-20 w-full">
+        <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+            <div class="flex-1 text-center lg:text-left max-w-2xl">
+                <div class="sr inline-flex items-center gap-2 tag border border-emerald-500/20 bg-emerald-500/5 mb-4">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" style="animation:blink 2s ease infinite"></span>
+                    <span class="text-emerald-300">Surgery-Free Solution</span>
+                </div>
+                <div class="sr d1 inline-flex items-center gap-2 tag border border-cyan-500/20 bg-cyan-500/5 mb-8 ml-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400" style="animation:blink 2s ease infinite .5s"></span>
+                    <span class="text-cyan-300">Pakistan's First AI Prosthetic</span>
+                </div>
+
+                <h1 class="sr d2 font-display text-5xl sm:text-6xl lg:text-[5rem] xl:text-[5.8rem] font-bold leading-[.92] tracking-tight mb-8">
+                    <span class="gradient-text-hero">Move</span><br>
+                    <span class="text-white">Naturally.</span><br>
+                    <span class="text-zinc-500">No Surgery.</span>
+                </h1>
+
+                <p class="sr d3 text-lg sm:text-xl text-zinc-400 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 mb-10">
+                    HuMotion reads your muscle signals and translates them into natural, smooth movement. Wear it and go. No surgery required. Powered by AI that learns and adapts to you.
+                </p>
+
+                <div class="sr d4 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+                    <a href="#pricing" class="group flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-2xl btn shadow-xl shadow-cyan-600/15 text-base">
+                        Pre-Order Now
+                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                    <a href="#tech" class="flex items-center gap-2.5 px-7 py-4 border border-zinc-800 hover:border-cyan-500/30 text-zinc-300 hover:text-white font-medium rounded-2xl transition-all text-base bg-zinc-900/50">
+                        <i data-lucide="play-circle" class="w-5 h-5 text-cyan-400"></i>
+                        How It Works
+                    </a>
+                </div>
+
+                <div class="sr d5 mt-14 flex items-center gap-10 justify-center lg:justify-start">
+                    <div><div class="text-3xl font-black font-display text-white counter" data-target="11">0</div><div class="text-[10px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">KG Lift</div></div>
+                    <div class="w-px h-12 bg-zinc-800"></div>
+                    <div><div class="text-3xl font-black font-display text-white counter" data-target="36">0</div><div class="text-[10px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Hrs Battery</div></div>
+                    <div class="w-px h-12 bg-zinc-800"></div>
+                    <div><div class="text-3xl font-black font-display gradient-text">&lt;50ms</div><div class="text-[10px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Response</div></div>
+                </div>
+            </div>
+
+            <!-- AI Core Visual -->
+            <div class="flex-1 flex items-center justify-center sr-scale d3">
+                <div class="core-container">
+                    <div class="core-center"></div>
+                    <div class="core-ring core-ring-1">
+                        <div class="core-node" style="top:0;left:50%;transform:translate(-50%,-50%)"></div>
+                        <div class="core-node core-node-v" style="bottom:0;left:50%;transform:translate(-50%,50%)"></div>
+                        <div class="core-node" style="top:50%;right:0;transform:translate(50%,-50%)"></div>
+                    </div>
+                    <div class="core-ring core-ring-2">
+                        <div class="core-node core-node-v" style="top:15%;right:10%"></div>
+                        <div class="core-node" style="bottom:15%;left:10%"></div>
+                    </div>
+                    <div class="core-ring core-ring-3">
+                        <div class="core-node" style="top:0;left:50%;transform:translate(-50%,-50%)"></div>
+                        <div class="core-node core-node-v" style="bottom:0;right:20%;transform:translate(50%,50%)"></div>
+                    </div>
+                    <!-- Data lines -->
+                    <div class="data-line" style="transform:rotate(0deg);animation-delay:0s;height:120px"></div>
+                    <div class="data-line" style="transform:rotate(72deg);animation-delay:.6s;height:100px"></div>
+                    <div class="data-line" style="transform:rotate(144deg);animation-delay:1.2s;height:140px"></div>
+                    <div class="data-line" style="transform:rotate(216deg);animation-delay:1.8s;height:110px"></div>
+                    <div class="data-line" style="transform:rotate(288deg);animation-delay:2.4s;height:130px"></div>
+                    
+                    <!-- Floating tags -->
+                    <div class="absolute top-4 right-0 tag bg-zinc-900/80 border border-cyan-500/10 text-cyan-300 backdrop-blur-md animate-float text-[10px]" style="animation-delay:.3s"><i data-lucide="brain" class="w-3 h-3"></i> AI Powered</div>
+                    <div class="absolute bottom-12 left-0 tag bg-zinc-900/80 border border-emerald-500/10 text-emerald-300 backdrop-blur-md animate-float text-[10px]" style="animation-delay:1.8s"><i data-lucide="heart" class="w-3 h-3"></i> Surgery-Free</div>
+                    <div class="absolute top-1/2 -right-4 tag bg-zinc-900/80 border border-violet-500/10 text-violet-300 backdrop-blur-md animate-float text-[10px]" style="animation-delay:3s"><i data-lucide="radio" class="w-3 h-3"></i> EMG Sense</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-float" style="animation-duration:3s">
+        <span class="text-[9px] text-zinc-700 uppercase tracking-[.3em] font-semibold">Scroll</span>
+        <div class="w-5 h-8 rounded-full border border-zinc-800 flex justify-center pt-1.5"><div class="w-1 h-2 rounded-full bg-cyan-500/50 animate-bounce"></div></div>
+    </div>
+</section>
+
+<!-- MARQUEE -->
+<section class="relative py-6 border-y border-zinc-800/50 overflow-hidden">
+    <div class="flex animate-marquee whitespace-nowrap">
+        <div class="flex items-center gap-8 mx-4">
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Surgery-Free</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">AI Powered</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">11KG Lift</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">36H Battery</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">EMG Control</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Wear & Go</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">On-Device ML</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Adaptive AI</span><span class="text-cyan-500/30">✦</span>
+        </div>
+        <div class="flex items-center gap-8 mx-4">
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Surgery-Free</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">AI Powered</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">11KG Lift</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">36H Battery</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">EMG Control</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Wear & Go</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">On-Device ML</span><span class="text-cyan-500/30">✦</span>
+            <span class="text-sm font-semibold text-zinc-600 uppercase tracking-wider">Adaptive AI</span><span class="text-cyan-500/30">✦</span>
+        </div>
+    </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem" class="relative py-28 sm:py-36">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-red-500/20 bg-red-500/5 text-red-300 mb-6"><i data-lucide="alert-triangle" class="w-3 h-3"></i> The Problem</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">Why Do Amputees<br><span class="text-red-400">Struggle Daily?</span></h2>
+            <p class="sr d2 text-lg text-zinc-400 font-light max-w-2xl mx-auto">Millions of amputees worldwide are left behind by prosthetic technology that has not fundamentally changed in decades.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="sr d1 card p-7 group"><div class="text-4xl mb-5">🌍</div><div class="text-4xl font-black font-display text-white mb-1 counter" data-target="40">0</div><div class="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-2">Million+ Amputees</div><p class="text-sm text-zinc-500 leading-relaxed">Worldwide need functional prosthetics but cannot access them.</p></div>
+            <div class="sr d2 card p-7 group"><div class="text-4xl mb-5">🦿</div><div class="text-lg font-bold text-white mb-1">Passive</div><div class="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-2">No Intelligence</div><p class="text-sm text-zinc-500 leading-relaxed">Most prosthetics are body-powered with no AI or learning capability.</p></div>
+            <div class="sr d3 card p-7 group"><div class="text-4xl mb-5">🔪</div><div class="text-lg font-bold text-white mb-1">Surgical Risk</div><div class="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-2">Invasive Procedures</div><p class="text-sm text-zinc-500 leading-relaxed">Advanced myoelectric arms often require invasive surgery to implant.</p></div>
+            <div class="sr d4 card p-7 group"><div class="text-4xl mb-5">💰</div><div class="text-lg font-bold text-white mb-1">$50,000+</div><div class="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-2">Prohibitively Costly</div><p class="text-sm text-zinc-500 leading-relaxed">Advanced prosthetics cost a fortune, unaffordable for most.</p></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- VS COMPARISON -->
+<section class="relative py-28 sm:py-36 overflow-hidden">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-cyan-500/[0.02] rounded-full blur-[120px]"></div>
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="git-compare" class="w-3 h-3"></i> A Better Way</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">Traditional vs <span class="gradient-text">HuMotion</span></h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <div class="sr-left space-y-3">
+                <div class="p-4 rounded-2xl bg-red-500/[0.04] border border-red-500/10 flex items-center gap-3 mb-2"><div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center"><i data-lucide="x-circle" class="w-4 h-4 text-red-400"></i></div><span class="font-bold text-red-300 text-xs uppercase tracking-wider">Traditional</span></div>
+                <div class="card p-4 flex items-start gap-3 hover:border-red-500/10"><i data-lucide="x" class="w-4 h-4 text-red-400/70 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Requires invasive surgery</span><p class="text-xs text-zinc-600 mt-1">Many advanced arms need surgical implants to function.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 hover:border-red-500/10"><i data-lucide="x" class="w-4 h-4 text-red-400/70 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Body-powered or passive</span><p class="text-xs text-zinc-600 mt-1">Physical effort to open/close, no automation.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 hover:border-red-500/10"><i data-lucide="x" class="w-4 h-4 text-red-400/70 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">No learning capability</span><p class="text-xs text-zinc-600 mt-1">Cannot adapt to unique movements or needs.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 hover:border-red-500/10"><i data-lucide="x" class="w-4 h-4 text-red-400/70 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Bulky & uncomfortable</span><p class="text-xs text-zinc-600 mt-1">Heavy builds cause fatigue, poor wearability.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 hover:border-red-500/10"><i data-lucide="x" class="w-4 h-4 text-red-400/70 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Low load capacity</span><p class="text-xs text-zinc-600 mt-1">Cannot handle real-world lifting or gripping.</p></div></div>
+            </div>
+            <div class="sr-right space-y-3">
+                <div class="p-4 rounded-2xl bg-cyan-500/[0.04] border border-cyan-500/10 flex items-center gap-3 mb-2"><div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center"><i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i></div><span class="font-bold text-cyan-300 text-xs uppercase tracking-wider">HuMotion</span></div>
+                <div class="card p-4 flex items-start gap-3 !border-cyan-500/[0.06] hover:!border-cyan-500/20"><i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">100% Surgery-free</span><p class="text-xs text-zinc-600 mt-1">External EMG sensors. Wear it and go. No implants needed.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 !border-cyan-500/[0.06] hover:!border-cyan-500/20"><i data-lucide="check" class="w-4 h-4 text-cyan-400 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Muscle-signal controlled</span><p class="text-xs text-zinc-600 mt-1">AI reads EMG signals for intuitive control.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 !border-cyan-500/[0.06] hover:!border-cyan-500/20"><i data-lucide="check" class="w-4 h-4 text-cyan-400 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">AI learns & adapts to you</span><p class="text-xs text-zinc-600 mt-1">Personalized movement improves over time.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 !border-cyan-500/[0.06] hover:!border-cyan-500/20"><i data-lucide="check" class="w-4 h-4 text-cyan-400 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Lightweight & comfortable</span><p class="text-xs text-zinc-600 mt-1">Ergonomic design for all-day wear.</p></div></div>
+                <div class="card p-4 flex items-start gap-3 !border-cyan-500/[0.06] hover:!border-cyan-500/20"><i data-lucide="check" class="w-4 h-4 text-cyan-400 mt-0.5 shrink-0"></i><div><span class="text-sm font-medium text-white">Lifts up to 11 KG</span><p class="text-xs text-zinc-600 mt-1">Real power for real life tasks.</p></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- HOW IT WORKS -->
+<section id="tech" class="relative py-28 sm:py-36">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="cpu" class="w-3 h-3"></i> Technology</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">Signal to Motion<br><span class="gradient-text">In Milliseconds</span></h2>
+            <p class="sr d2 text-lg text-zinc-400 font-light max-w-2xl mx-auto">No surgery. No implants. Just external sensors that read your muscle signals and AI that translates them into natural movement.</p>
+        </div>
+        <div class="relative max-w-5xl mx-auto mb-20">
+            <div class="hidden lg:block absolute top-6 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent"></div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-8">
+                <div class="sr d1 text-center group"><div class="step-number bg-zinc-900 border border-cyan-500/20 text-cyan-400 mx-auto mb-5">01</div><h3 class="text-sm font-bold text-white mb-2 font-display uppercase tracking-wider">Detect</h3><p class="text-xs text-zinc-500 leading-relaxed">External EMG sensors read muscle signals in real time.</p></div>
+                <div class="sr d2 text-center group"><div class="step-number bg-zinc-900 border border-cyan-500/20 text-cyan-400 mx-auto mb-5">02</div><h3 class="text-sm font-bold text-white mb-2 font-display uppercase tracking-wider">Process</h3><p class="text-xs text-zinc-500 leading-relaxed">On-device AI interprets patterns, no cloud delay.</p></div>
+                <div class="sr d3 text-center group"><div class="step-number bg-zinc-900 border border-cyan-500/20 text-cyan-400 mx-auto mb-5">03</div><h3 class="text-sm font-bold text-white mb-2 font-display uppercase tracking-wider">Execute</h3><p class="text-xs text-zinc-500 leading-relaxed">Servo motors perform smooth, precise movements.</p></div>
+                <div class="sr d4 text-center group"><div class="step-number bg-zinc-900 border border-cyan-500/20 text-cyan-400 mx-auto mb-5">04</div><h3 class="text-sm font-bold text-white mb-2 font-display uppercase tracking-wider">Adapt</h3><p class="text-xs text-zinc-500 leading-relaxed">AI continuously learns your unique patterns.</p></div>
+                <div class="sr d5 text-center group"><div class="step-number bg-zinc-900 border border-cyan-500/20 text-cyan-400 mx-auto mb-5">05</div><h3 class="text-sm font-bold text-white mb-2 font-display uppercase tracking-wider">Connect</h3><p class="text-xs text-zinc-500 leading-relaxed">Mobile app for grips, battery, and sensitivity.</p></div>
+            </div>
+        </div>
+        <div class="sr grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
+            <div class="card p-5 text-center"><div class="text-xl font-black font-mono gradient-text">&lt;50ms</div><div class="text-[9px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Response</div></div>
+            <div class="card p-5 text-center"><div class="text-xl font-black font-mono text-white">EMG</div><div class="text-[9px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Signal</div></div>
+            <div class="card p-5 text-center"><div class="text-xl font-black font-mono text-white">On-Device</div><div class="text-[9px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">AI Model</div></div>
+            <div class="card p-5 text-center"><div class="text-xl font-black font-mono text-white">BT + App</div><div class="text-[9px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Connect</div></div>
+            <div class="card p-5 text-center col-span-2 md:col-span-1"><div class="text-xl font-black font-mono text-white">Li-Ion</div><div class="text-[9px] text-zinc-600 uppercase tracking-[.2em] font-semibold mt-1">Power</div></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- FEATURES -->
+<section id="features" class="relative py-28 sm:py-36">
+    <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-500/[0.02] rounded-full blur-[150px]"></div>
+    <div class="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="sparkles" class="w-3 h-3"></i> Features</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">What HuMotion <span class="gradient-text">Delivers</span></h2>
+        </div>
+        <div class="grid md:grid-cols-6 gap-4">
+            <div class="sr d1 md:col-span-4 card p-8 group relative overflow-hidden">
+                <div class="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500/[0.03] rounded-full blur-[60px] group-hover:bg-cyan-500/[0.06] transition-all duration-700"></div>
+                <div class="relative">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="feature-icon"><i data-lucide="brain" class="w-6 h-6 text-cyan-400 relative z-10"></i></div>
+                        <div><h3 class="text-xl font-bold font-display text-white">AI Protection</h3><span class="text-[10px] font-bold text-cyan-400/50 uppercase tracking-wider">Core Technology</span></div>
+                    </div>
+                    <p class="text-sm text-zinc-500 leading-relaxed max-w-md mb-6">On-device ML learns your muscle signal patterns and adapts, improving control accuracy the more you wear it. No cloud dependency. No latency. Pure responsive intelligence.</p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="tag bg-cyan-500/[0.06] border border-cyan-500/10 text-cyan-300">On-Device ML</span>
+                        <span class="tag bg-cyan-500/[0.06] border border-cyan-500/10 text-cyan-300">Adaptive</span>
+                        <span class="tag bg-violet-500/[0.06] border border-violet-500/10 text-violet-300">No Cloud</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sr d2 md:col-span-2 card p-8 group relative overflow-hidden">
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/[0.04] rounded-full blur-[40px]"></div>
+                <div class="feature-icon mb-5 !bg-emerald-500/10"><i data-lucide="heart" class="w-6 h-6 text-emerald-400 relative z-10"></i></div>
+                <h3 class="text-lg font-bold font-display text-white mb-2">Surgery-Free</h3>
+                <p class="text-sm text-zinc-500 leading-relaxed">External EMG sensors only. Wear it and go. No implants, no invasive procedures, no recovery downtime.</p>
+            </div>
+            <div class="sr d3 md:col-span-2 card p-8 group"><div class="feature-icon mb-5"><i data-lucide="hand" class="w-6 h-6 text-cyan-400 relative z-10"></i></div><h3 class="text-lg font-bold font-display text-white mb-2">Multiple Grip Modes</h3><p class="text-sm text-zinc-500 leading-relaxed">Power grip, pinch, tripod and custom modes from the app or a quick gesture.</p></div>
+            <div class="sr d4 md:col-span-4 card p-8 group relative overflow-hidden">
+                <div class="absolute -bottom-16 -left-16 w-48 h-48 bg-violet-500/[0.03] rounded-full blur-[50px] group-hover:bg-violet-500/[0.06] transition-all duration-700"></div>
+                <div class="relative flex flex-col sm:flex-row gap-8 items-center">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-4 mb-5">
+                            <div class="feature-icon"><i data-lucide="dumbbell" class="w-6 h-6 text-cyan-400 relative z-10"></i></div>
+                            <div><h3 class="text-xl font-bold font-display text-white">11 KG Lift</h3><span class="text-[10px] font-bold text-cyan-400/50 uppercase tracking-wider">Real Power</span></div>
+                        </div>
+                        <p class="text-sm text-zinc-500 leading-relaxed">Servo-driven joints deliver real strength. Lift, carry, and grip with confidence in daily and work tasks.</p>
+                    </div>
+                    <div class="relative w-32 h-32 shrink-0">
+                        <svg class="w-32 h-32 -rotate-90" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="7"/><circle cx="50" cy="50" r="42" fill="none" stroke="url(#cgrad)" stroke-width="7" stroke-dasharray="264" stroke-dashoffset="26" stroke-linecap="round" class="sr-scale d5"/><defs><linearGradient id="cgrad" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs></svg>
+                        <div class="absolute inset-0 flex items-center justify-center"><span class="text-2xl font-black font-display text-white">11<span class="text-xs gradient-text font-bold ml-0.5">KG</span></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="sr d5 md:col-span-3 card p-8 group">
+                <div class="flex items-center gap-4 mb-5"><div class="feature-icon"><i data-lucide="battery-full" class="w-6 h-6 text-cyan-400 relative z-10"></i></div><div><h3 class="text-lg font-bold font-display text-white">36-Hour Battery</h3><span class="text-[10px] font-bold text-cyan-400/50 uppercase tracking-wider">All Day & Night</span></div></div>
+                <p class="text-sm text-zinc-500 leading-relaxed mb-5">Long-lasting Li-Ion battery with USB-C fast charge. 0 to 80% in under an hour.</p>
+                <div class="w-full h-2 rounded-full bg-white/[0.03] overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-violet-500 transition-all duration-[2s] ease-out" style="width:0%" data-width="95%"></div></div>
+                <div class="flex justify-between mt-2 text-[9px] text-zinc-600 uppercase tracking-wider font-semibold"><span>0%</span><span>USB-C Fast Charge</span><span>100%</span></div>
+            </div>
+            <div class="sr d6 md:col-span-3 card p-8 group"><div class="feature-icon mb-5"><i data-lucide="smartphone" class="w-6 h-6 text-cyan-400 relative z-10"></i></div><h3 class="text-lg font-bold font-display text-white mb-2">Mobile App Control</h3><p class="text-sm text-zinc-500 leading-relaxed mb-4">Customize sensitivity, switch grips, monitor battery via Bluetooth.</p><div class="flex items-center gap-2"><span class="tag bg-white/[0.03] border border-white/[0.06] text-zinc-400">Android</span><span class="tag bg-white/[0.03] border border-white/[0.06] text-zinc-400">iOS</span><span class="tag bg-white/[0.03] border border-white/[0.06] text-zinc-400">Bluetooth</span></div></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- COMPARE TABLE -->
+<section id="compare" class="relative py-28 sm:py-36">
+    <div class="max-w-5xl mx-auto px-6 lg:px-8">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="bar-chart-3" class="w-3 h-3"></i> Comparison</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">HuMotion vs <span class="gradient-text">Alternatives</span></h2>
+        </div>
+        <div class="sr overflow-hidden rounded-2xl border border-white/[0.04] bg-zinc-900/50">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="border-b border-white/[0.04]"><th class="text-left p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[.15em]">Capability</th><th class="text-center p-5 text-[10px] font-bold text-cyan-400 uppercase tracking-[.15em]">HuMotion</th><th class="text-center p-5 text-[10px] font-bold text-zinc-600 uppercase tracking-[.15em]">Body-Powered</th><th class="text-center p-5 text-[10px] font-bold text-zinc-600 uppercase tracking-[.15em]">Basic Myoelectric</th></tr></thead>
+                    <tbody>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Surgery-Free</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-emerald-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-zinc-500 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">AI Threat Detection</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Muscle Signal Control</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Multiple Grip Modes</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><span class="text-amber-400 text-lg font-bold">~</span></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Wrist Rotation</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><span class="text-amber-400 text-lg font-bold">~</span></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Mobile App Support</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Lifts 11+ KG</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><span class="text-amber-400 text-lg font-bold">~</span></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td></tr>
+                        <tr class="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">36-Hour Battery</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center text-zinc-700 text-xs font-mono">N/A</td><td class="p-4 text-center"><span class="text-amber-400 text-lg font-bold">~</span></td></tr>
+                        <tr class="hover:bg-white/[0.01] transition-colors"><td class="p-4 pl-5 text-white font-medium">Adaptive AI Learning</td><td class="p-4 text-center"><i data-lucide="check" class="w-5 h-5 text-cyan-400 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td><td class="p-4 text-center"><i data-lucide="x" class="w-5 h-5 text-red-400/60 inline"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- WHO IT HELPS -->
+<section class="relative py-28 sm:py-36">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="text-center mb-20">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="users" class="w-3 h-3"></i> For Everyone</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">Empowering Amputees<br><span class="gradient-text">Across Every Walk of Life</span></h2>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="sr d1 card p-6 text-center group"><div class="text-4xl mb-4">🎓</div><h3 class="text-sm font-bold font-display text-white mb-2">Students & Youth</h3><p class="text-xs text-zinc-500 leading-relaxed">Write, type, and carry. Full participation in education and campus life.</p></div>
+            <div class="sr d2 card p-6 text-center group"><div class="text-4xl mb-4">💼</div><h3 class="text-sm font-bold font-display text-white mb-2">Working Adults</h3><p class="text-xs text-zinc-500 leading-relaxed">Office work, meetings, field tasks. Regain professional capability.</p></div>
+            <div class="sr d3 card p-6 text-center group"><div class="text-4xl mb-4">⚽</div><h3 class="text-sm font-bold font-display text-white mb-2">Athletes</h3><p class="text-xs text-zinc-500 leading-relaxed">Multi-grip modes for sports, fitness, and recreation.</p></div>
+            <div class="sr d4 card p-6 text-center group"><div class="text-4xl mb-4">🏭</div><h3 class="text-sm font-bold font-display text-white mb-2">Industrial Workers</h3><p class="text-xs text-zinc-500 leading-relaxed">11 KG lift for construction, manufacturing, and more.</p></div>
+            <div class="sr d5 card p-6 text-center group"><div class="text-4xl mb-4">🏥</div><h3 class="text-sm font-bold font-display text-white mb-2">Rehab Patients</h3><p class="text-xs text-zinc-500 leading-relaxed">Adaptive AI eases recovery and rebuilds confidence.</p></div>
+            <div class="sr d6 card p-6 text-center group"><div class="text-4xl mb-4">👨‍👩‍👧</div><h3 class="text-sm font-bold font-display text-white mb-2">Families</h3><p class="text-xs text-zinc-500 leading-relaxed">Restore daily task ability with dignity and independence.</p></div>
+            <div class="sr d7 card p-6 text-center group lg:col-span-2"><div class="text-4xl mb-4">🌍</div><h3 class="text-sm font-bold font-display text-white mb-2">Rural Communities</h3><p class="text-xs text-zinc-500 leading-relaxed">Affordable pricing ensures access beyond urban centers, reaching those who need it most. Everyone deserves freedom of movement.</p></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- PRICING -->
+<section id="pricing" class="relative py-28 sm:py-36">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-500/[0.02] rounded-full blur-[180px]"></div>
+    <div class="max-w-5xl mx-auto px-6 lg:px-8 relative z-10">
+        <div class="text-center mb-8">
+            <div class="sr tag border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 mb-6"><i data-lucide="tag" class="w-3 h-3"></i> Pricing</div>
+            <h2 class="sr d1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">Reserve Yours <span class="gradient-text">Today</span></h2>
+        </div>
+        <div class="sr d2 max-w-2xl mx-auto mb-14 p-5 rounded-2xl bg-gradient-to-r from-cyan-500/[0.05] via-zinc-900/50 to-violet-500/[0.05] border border-cyan-500/10 text-center glow">
+            <div class="flex items-center justify-center gap-2.5 mb-2"><span class="text-xl">🎉</span><span class="font-bold text-cyan-300 text-sm">EARLY BIRD: 20% OFF FOR FIRST 300 ORDERS</span></div>
+            <div class="text-xs text-zinc-400">USE CODE: <span class="font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-lg ml-1">HUMOTION20</span></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            <div class="sr d3 card p-8 group">
+                <h3 class="text-xl font-bold font-display text-white mb-1">HuMotion Standard</h3>
+                <p class="text-xs text-zinc-500 mb-6">One-time purchase + app</p>
+                <div class="flex items-baseline gap-3 mb-8"><span class="text-4xl font-black font-display text-white">Rs. 185,000</span><span class="text-sm text-zinc-600 line-through">Rs. 230,000</span></div>
+                <ul class="space-y-3.5 mb-8">
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>HuMotion arm (1 colorway)</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>Android companion app</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>3 preset grip modes</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0"></i>Surgery-free wear</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>1-year warranty</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-400"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>Standard support</li>
+                </ul>
+                <button onclick="showToast('Standard selected! We will contact you.')" class="w-full py-3.5 rounded-xl border border-cyan-500/20 text-cyan-400 font-semibold hover:bg-cyan-500/10 transition-all text-sm btn">Get Standard</button>
+            </div>
+            <div class="sr d4 card pricing-popular p-8 group glow-strong">
+                <div class="absolute top-5 right-5 px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 text-[10px] font-bold text-white uppercase tracking-wider">Most Popular</div>
+                <h3 class="text-xl font-bold font-display text-white mb-1">HuMotion Pro Bundle</h3>
+                <p class="text-xs text-zinc-500 mb-6">Arm + 2 covers + premium app</p>
+                <div class="flex items-baseline gap-3 mb-8"><span class="text-4xl font-black font-display gradient-text">Rs. 245,000</span><span class="text-sm text-zinc-600 line-through">Rs. 310,000</span></div>
+                <ul class="space-y-3.5 mb-8">
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>HuMotion arm + 2 color covers</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>Android + iOS companion app</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>6 customizable grip modes</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0"></i>Surgery-free wear</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>2-year extended warranty</li>
+                    <li class="flex items-center gap-3 text-sm text-zinc-300"><i data-lucide="check" class="w-4 h-4 text-cyan-400 shrink-0"></i>Priority support + free delivery</li>
+                </ul>
+                <button onclick="showToast('Pro Bundle selected! We will contact you.')" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold btn shadow-lg shadow-cyan-600/15 text-sm">Get Pro Bundle</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-line max-w-5xl mx-auto"></div>
+
+<!-- CTA / CONTACT -->
+<section id="contact" class="relative py-28 sm:py-36">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="sr relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-white/[0.04] p-14 sm:p-20 text-center">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-cyan-500/[0.05] rounded-full blur-[150px]"></div>
+            <div class="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-violet-500/[0.03] rounded-full blur-[100px]"></div>
+            <div class="relative z-10">
+                <div class="tag border border-emerald-500/20 bg-emerald-500/5 text-emerald-300 mb-8 inline-flex"><i data-lucide="heart" class="w-3 h-3"></i> Surgery-Free. Designed for Real Life.</div>
+                <h2 class="font-display text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1]">Movement That<br>Feels <span class="gradient-text-hero">Natural.</span></h2>
+                <p class="text-xl text-zinc-400 font-light mb-2">Controlled By You. No Surgery Required.</p>
+                <p class="text-sm text-zinc-500 mb-10">Pre-Order at humotion.pk</p>
+                <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+                    <a href="tel:03338971343" class="group flex items-center gap-2.5 px-5 py-3 rounded-2xl glass border border-white/[0.06] hover:border-cyan-500/20 transition-all btn"><i data-lucide="phone" class="w-4 h-4 text-cyan-400"></i><span class="text-sm text-zinc-300 group-hover:text-white transition-colors">0333-8971343</span></a>
+                    <a href="mailto:zuberi1508@icloud.com" class="group flex items-center gap-2.5 px-5 py-3 rounded-2xl glass border border-white/[0.06] hover:border-cyan-500/20 transition-all btn"><i data-lucide="mail" class="w-4 h-4 text-cyan-400"></i><span class="text-sm text-zinc-300 group-hover:text-white transition-colors hidden sm:inline">zuberi1508@icloud.com</span><span class="text-sm text-zinc-300 group-hover:text-white transition-colors sm:hidden">Email</span></a>
+                    <a href="https://www.linkedin.com/in/zuberiii/" target="_blank" class="group flex items-center gap-2.5 px-5 py-3 rounded-2xl glass border border-white/[0.06] hover:border-cyan-500/20 transition-all btn"><i data-lucide="linkedin" class="w-4 h-4 text-cyan-400"></i><span class="text-sm text-zinc-300 group-hover:text-white transition-colors">LinkedIn</span></a>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <a href="#pricing" class="group flex items-center gap-2.5 px-10 py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-2xl btn shadow-xl shadow-cyan-600/15 text-base">Pre-Order Now <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i></a>
+                    <a href="mailto:qasimmustafa112@gmail.com" class="flex items-center gap-2.5 px-7 py-4 border border-zinc-800 hover:border-cyan-500/30 text-zinc-300 hover:text-white font-medium rounded-2xl transition-all text-base bg-zinc-900/50 btn"><i data-lucide="send" class="w-4 h-4 text-cyan-400"></i> Email Us</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-white/[0.03] py-14">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            <div>
+                <a href="#" class="flex items-center gap-2.5 mb-5"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/20"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v20M5 8l7-6 7 6"/></svg></div><span class="text-lg font-bold font-display tracking-tight">Hu<span class="gradient-text">Motion</span></span></a>
+                <p class="text-sm text-zinc-500 leading-relaxed">AI-Powered Prosthetic Arm for Real Life. Surgery-free. Designed in Pakistan for the world.</p>
+            </div>
+            <div>
+                <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-[.2em] mb-5">Quick Links</h4>
+                <ul class="space-y-2.5"><li><a href="#problem" class="text-sm text-zinc-500 hover:text-white transition-colors">The Problem</a></li><li><a href="#tech" class="text-sm text-zinc-500 hover:text-white transition-colors">Technology</a></li><li><a href="#features" class="text-sm text-zinc-500 hover:text-white transition-colors">Features</a></li><li><a href="#compare" class="text-sm text-zinc-500 hover:text-white transition-colors">Compare</a></li><li><a href="#pricing" class="text-sm text-zinc-500 hover:text-white transition-colors">Pricing</a></li></ul>
+            </div>
+            <div>
+                <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-[.2em] mb-5">Contact</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="tel:03338971343" class="text-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="phone" class="w-3.5 h-3.5 text-cyan-500/40"></i>0333-8971343</a></li>
+                    <li><a href="mailto:zuberi1508@icloud.com" class="text-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="mail" class="w-3.5 h-3.5 text-cyan-500/40"></i>zuberi1508@icloud.com</a></li>
+                    <li><a href="mailto:qasimmustafa112@gmail.com" class="text-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="mail" class="w-3.5 h-3.5 text-cyan-500/40"></i>qasimmustafa112@gmail.com</a></li>
+                    <li><a href="https://www.linkedin.com/in/zuberiii/" target="_blank" class="text-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="linkedin" class="w-3.5 h-3.5 text-cyan-500/40"></i>LinkedIn</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-[.2em] mb-5">Location</h4>
+                <p class="text-sm text-zinc-500 flex items-center gap-2 mb-4"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyan-500/40"></i>Rawalpindi, Pakistan</p>
+                <p class="text-xs text-zinc-600">Emergency: <span class="text-zinc-400 font-mono">1122</span></p>
+                <p class="text-xs text-zinc-600 mt-1">Disability Helpline: <span class="text-zinc-400 font-mono">1214</span></p>
+            </div>
+        </div>
+        <div class="border-t border-white/[0.03] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-zinc-600">2025 HuMotion. All rights reserved.</p>
+            <p class="text-xs text-zinc-600">Proudly presented by HuMotion Team</p>
+        </div>
+    </div>
+</footer>
+
+</div><!-- end site-content -->
+
+<script>
+lucide.createIcons();
+
+// ===== CINEMATIC INTRO =====
+const overlay = document.getElementById('intro-overlay');
+const siteContent = document.getElementById('site-content');
+setTimeout(() => {
+    overlay.classList.add('hide');
+    siteContent.classList.add('visible');
+    setTimeout(() => { overlay.style.display = 'none'; }, 800);
+}, 2600);
+
+// Mobile menu
+const mm=document.getElementById('mobileMenu'),mb=document.getElementById('menuBtn'),mc=document.getElementById('menuClose');
+mb.onclick=()=>mm.classList.add('open');mc.onclick=()=>mm.classList.remove('open');
+document.querySelectorAll('.mob-link').forEach(l=>l.onclick=()=>mm.classList.remove('open'));
+
+// Nav
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>{
+    if(scrollY>60){nav.style.background='rgba(9,9,11,0.92)';nav.style.backdropFilter='blur(20px)';nav.style.borderBottom='1px solid rgba(255,255,255,0.03)'}
+    else{nav.style.background='transparent';nav.style.backdropFilter='none';nav.style.borderBottom='none'}
+});
+
+// Scroll reveal
+const srs=document.querySelectorAll('.sr,.sr-left,.sr-right,.sr-scale');
+const sro=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting)el.target.classList.add('visible')})},{threshold:.06,rootMargin:'0px 0px -30px 0px'});
+srs.forEach(el=>sro.observe(el));
+
+// Counters
+const ctrs=document.querySelectorAll('.counter');
+const cro=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting&&!el.target.dataset.done){el.target.dataset.done='1';const t=+el.target.dataset.target,d=2000,s=performance.now();(function a(n){const p=Math.min((n-s)/d,1),ea=1-Math.pow(1-p,4);el.target.textContent=Math.floor(ea*t);p<1?requestAnimationFrame(a):el.target.textContent=t})(performance.now())}})},{threshold:.5});
+ctrs.forEach(c=>cro.observe(c));
+
+// Battery bar
+const bars=document.querySelectorAll('[data-width]');
+const bro=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting)el.target.style.width=el.target.dataset.width})},{threshold:.5});
+bars.forEach(b=>bro.observe(b));
+
+// Particles
+const cv=document.getElementById('particles'),cx=cv.getContext('2d');
+let pts=[];
+function rsz(){cv.width=innerWidth;cv.height=innerHeight}rsz();addEventListener('resize',rsz);
+class P{constructor(){this.r()}r(){this.x=Math.random()*cv.width;this.y=Math.random()*cv.height;this.s=Math.random()*1+.3;this.vx=(Math.random()-.5)*.25;this.vy=(Math.random()-.5)*.25;this.o=Math.random()*.3+.05}u(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>cv.width||this.y<0||this.y>cv.height)this.r()}d(){cx.beginPath();cx.arc(this.x,this.y,this.s,0,6.28);cx.fillStyle=`rgba(6,182,212,${this.o})`;cx.fill()}}
+const pc=Math.min(50,Math.floor(cv.width*cv.height/25000));for(let i=0;i<pc;i++)pts.push(new P());
+function conn(){for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){cx.beginPath();cx.moveTo(pts[i].x,pts[i].y);cx.lineTo(pts[j].x,pts[j].y);cx.strokeStyle=`rgba(6,182,212,${.03*(1-d/140)})`;cx.lineWidth=.5;cx.stroke()}}}
+function anim(){cx.clearRect(0,0,cv.width,cv.height);pts.forEach(p=>{p.u();p.d()});conn();requestAnimationFrame(anim)}anim();
+
+// Toast
+function showToast(m){const t=document.getElementById('toast'),s=document.getElementById('toastMsg');s.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500)}
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'})})});
+
+// Active nav
+const secs=document.querySelectorAll('section[id]'),nls=document.querySelectorAll('.nav-link');
+window.addEventListener('scroll',()=>{let c='';secs.forEach(s=>{if(scrollY>=s.offsetTop-150)c=s.id});nls.forEach(l=>{l.style.color=l.getAttribute('href')===`#${c}`?'#fff':'';l.style.background=l.getAttribute('href')===`#${c}`?'rgba(255,255,255,0.05)':''})});
+</script>
+</body>
+</html>
